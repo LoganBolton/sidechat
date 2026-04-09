@@ -1,21 +1,45 @@
-const SYSTEM_PROMPT = `You are a helpful assistant answering a branching clarification question. The user is in the middle of a conversation and wants to ask a side question without disrupting the main thread. The user has selected a specific piece of text and wants clarification about it. Be concise and directly helpful. Do not suggest that the user ask in their main conversation.`;
+const SYSTEM_PROMPT = `You are a helpful assistant answering a branching clarification question. The user is in the middle of a conversation and wants to ask a side question without disrupting the main thread. You have access to the full conversation context. If the user highlighted a specific excerpt, focus on that. Otherwise, use the full conversation to inform your answer. Be concise and directly helpful. Do not suggest that the user ask in their main conversation.`;
 
-// Register context menu on install
+// Register context menus on install
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: "sidechat-ask",
-    title: "Sidechat: Ask about this",
-    contexts: ["selection"],
-    documentUrlPatterns: ["https://claude.ai/*"],
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: "sidechat-ask",
+      title: "Sidechat: Ask about selection",
+      contexts: ["selection"],
+      documentUrlPatterns: ["https://claude.ai/*"],
+    });
+    chrome.contextMenus.create({
+      id: "sidechat-open",
+      title: "Sidechat: Open",
+      contexts: ["page"],
+      documentUrlPatterns: ["https://claude.ai/*"],
+    });
   });
 });
 
 // Handle context menu click
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === "sidechat-ask" && tab?.id) {
+  if (!tab?.id) return;
+  if (info.menuItemId === "sidechat-ask") {
     chrome.tabs.sendMessage(tab.id, {
       type: "sidechat-open",
       selectionText: info.selectionText || "",
+    });
+  } else if (info.menuItemId === "sidechat-open") {
+    chrome.tabs.sendMessage(tab.id, {
+      type: "sidechat-open",
+      selectionText: "",
+    });
+  }
+});
+
+// Handle keyboard shortcut
+chrome.commands.onCommand.addListener((command, tab) => {
+  if (command === "open-sidechat" && tab?.id) {
+    chrome.tabs.sendMessage(tab.id, {
+      type: "sidechat-open",
+      selectionText: "",
     });
   }
 });
@@ -74,10 +98,17 @@ function buildMessages(conversationTurns, selectedText, question, branchHistory)
   }
 
   // Add the new branching question
-  messages.push({
-    role: "user",
-    content: `I have a side question about the following excerpt from our conversation:\n\n> ${selectedText}\n\nMy question: ${question}`,
-  });
+  if (selectedText) {
+    messages.push({
+      role: "user",
+      content: `I have a side question about the following excerpt from our conversation:\n\n> ${selectedText}\n\nMy question: ${question}`,
+    });
+  } else {
+    messages.push({
+      role: "user",
+      content: `I have a side question about our conversation:\n\n${question}`,
+    });
+  }
 
   // Ensure messages start with a user message (API requirement)
   if (messages.length > 0 && messages[0].role !== "user") {

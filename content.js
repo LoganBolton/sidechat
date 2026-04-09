@@ -323,20 +323,29 @@
     style.textContent = getShadowStyles();
     shadowRoot.appendChild(style);
 
+    // Eagerly scrape conversation to show context status
+    const earlyTurns = scrapeConversation();
+    const msgCount = earlyTurns.length;
+    const hasSelection = selectionText.length > 0;
+    const placeholder = hasSelection
+      ? "Ask about this selection..."
+      : "Ask about this conversation...";
+
     // Build panel
     const panel = document.createElement("div");
     panel.className = `sidechat-panel ${theme}`;
     panel.innerHTML = `
       <div class="sidechat-titlebar">
         <span class="sidechat-title">Sidechat</span>
+        <span class="sidechat-context-status">${msgCount} message${msgCount !== 1 ? "s" : ""} loaded</span>
         <button class="sidechat-close" aria-label="Close">&times;</button>
       </div>
       <div class="sidechat-body">
         <div class="sidechat-messages">
-          <blockquote class="sidechat-selection">${escapeHtml(selectionText)}</blockquote>
+          ${hasSelection ? `<blockquote class="sidechat-selection">${escapeHtml(selectionText)}</blockquote>` : ""}
         </div>
         <div class="sidechat-input-area">
-          <textarea class="sidechat-input" placeholder="Ask your question..." rows="2"></textarea>
+          <textarea class="sidechat-input" placeholder="${placeholder}" rows="2"></textarea>
           <button class="sidechat-submit">Submit</button>
         </div>
       </div>
@@ -658,6 +667,17 @@
         font-size: 13px;
         color: var(--text);
         letter-spacing: 0.02em;
+      }
+
+      .sidechat-context-status {
+        font-size: 11px;
+        color: var(--text-muted);
+        background: var(--border);
+        padding: 2px 8px;
+        border-radius: 10px;
+        margin-left: auto;
+        margin-right: 8px;
+        white-space: nowrap;
       }
 
       .sidechat-close {
