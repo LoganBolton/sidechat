@@ -353,6 +353,11 @@
 
     submitBtn.addEventListener("click", () => handleSubmit(textarea));
 
+    // Stop all keyboard/input events from bubbling to the main page
+    ["keydown", "keyup", "keypress", "input", "beforeinput"].forEach((evt) => {
+      textarea.addEventListener(evt, (e) => e.stopPropagation());
+    });
+
     textarea.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
