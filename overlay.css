@@ -1,0 +1,18 @@
+/*
+ * Sidechat overlay host styles.
+ * The panel itself is rendered inside a Shadow DOM, so these only style the host element.
+ * All internal styles are injected via getShadowStyles() in content.js.
+ */
+
+#sidechat-host {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 2147483647;
+  width: 420px;
+  height: 500px;
+  min-width: 300px;
+  min-height: 300px;
+  resize: both;
+  overflow: hidden;
+}
