@@ -1,6 +1,7 @@
 const apiKeyInput = document.getElementById("apiKey");
 const toggleKeyBtn = document.getElementById("toggleKey");
 const modelSelect = document.getElementById("model");
+const thinkingLevelSelect = document.getElementById("thinkingLevel");
 const maxTokensRange = document.getElementById("maxTokens");
 const maxTokensValue = document.getElementById("maxTokensValue");
 const saveBtn = document.getElementById("saveBtn");
@@ -8,10 +9,16 @@ const status = document.getElementById("status");
 
 // Load saved settings
 chrome.storage.sync.get(
-  { apiKey: "", model: "claude-sonnet-4-20250514", maxTokens: 4096 },
+  {
+    apiKey: "",
+    model: "claude-sonnet-4-20250514",
+    thinkingLevel: "off",
+    maxTokens: 4096,
+  },
   (items) => {
     apiKeyInput.value = items.apiKey;
     modelSelect.value = items.model;
+    thinkingLevelSelect.value = items.thinkingLevel;
     maxTokensRange.value = items.maxTokens;
     maxTokensValue.textContent = items.maxTokens;
   }
@@ -35,6 +42,7 @@ saveBtn.addEventListener("click", () => {
     {
       apiKey: apiKeyInput.value.trim(),
       model: modelSelect.value,
+      thinkingLevel: thinkingLevelSelect.value,
       maxTokens: parseInt(maxTokensRange.value, 10),
     },
     () => {

@@ -55,6 +55,7 @@ chrome.runtime.onConnect.addListener((port) => {
       const settings = await chrome.storage.sync.get({
         apiKey: "",
         model: "claude-sonnet-4-20250514",
+        thinkingLevel: "off",
         maxTokens: 4096,
       });
 
@@ -122,6 +123,23 @@ function buildMessages(conversationTurns, selectedText, question, branchHistory)
 }
 
 async function streamResponse(port, settings, messages) {
+  const body = {
+    model: settings.model,
+    max_tokens: settings.maxTokens,
+    stream: true,
+    system: SYSTEM_PROMPT,
+    messages: messages,
+  };
+
+  if (settings.thinkingLevel && settings.thinkingLevel !== "off") {
+    const budgets = { low: 2000, medium: 8000, high: 16000 };
+    const budget = budgets[settings.thinkingLevel] || 2000;
+    body.thinking = { type: "enabled", budget_tokens: budget };
+    if (body.max_tokens <= budget) {
+      body.max_tokens = budget + 4096;
+    }
+  }
+
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -130,13 +148,7 @@ async function streamResponse(port, settings, messages) {
       "anthropic-version": "2023-06-01",
       "anthropic-dangerous-direct-browser-access": "true",
     },
-    body: JSON.stringify({
-      model: settings.model,
-      max_tokens: settings.maxTokens,
-      stream: true,
-      system: SYSTEM_PROMPT,
-      messages: messages,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {

@@ -300,12 +300,32 @@
   // Overlay Panel
   // =========================================================================
 
-  function createPanel(selectionText) {
+  const MODEL_LABELS = {
+    "claude-sonnet-4-20250514": "Sonnet 4",
+    "claude-haiku-4-5-20251001": "Haiku 4.5",
+    "claude-opus-4-6": "Opus 4.6",
+  };
+
+  const THINKING_LABELS = {
+    off: "No thinking",
+    low: "Low thinking",
+    medium: "Medium thinking",
+    high: "High thinking",
+  };
+
+  async function createPanel(selectionText) {
     // Remove existing panel
     removePanel();
 
     currentSelectedText = selectionText;
     branchHistory = [];
+
+    const settings = await chrome.storage.sync.get({
+      model: "claude-sonnet-4-20250514",
+      thinkingLevel: "off",
+    });
+    const modelLabel = MODEL_LABELS[settings.model] || settings.model;
+    const thinkingLabel = THINKING_LABELS[settings.thinkingLevel] || settings.thinkingLevel;
 
     // Create Shadow DOM host
     panelHost = document.createElement("div");
@@ -323,9 +343,6 @@
     style.textContent = getShadowStyles();
     shadowRoot.appendChild(style);
 
-    // Eagerly scrape conversation to show context status
-    const earlyTurns = scrapeConversation();
-    const msgCount = earlyTurns.length;
     const hasSelection = selectionText.length > 0;
     const placeholder = hasSelection
       ? "Ask about this selection..."
@@ -337,7 +354,7 @@
     panel.innerHTML = `
       <div class="sidechat-titlebar">
         <span class="sidechat-title">Sidechat</span>
-        <span class="sidechat-context-status">${msgCount} message${msgCount !== 1 ? "s" : ""} loaded</span>
+        <span class="sidechat-model-info">${escapeHtml(modelLabel)} · ${escapeHtml(thinkingLabel)}</span>
         <button class="sidechat-close" aria-label="Close">&times;</button>
       </div>
       <div class="sidechat-body">
@@ -368,7 +385,7 @@
     });
 
     textarea.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         handleSubmit(textarea);
       }
@@ -416,8 +433,6 @@
     thinkingMsg.textContent = "Thinking...";
     messagesContainer.appendChild(thinkingMsg);
 
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
     // Scrape conversation
     let conversationTurns = scrapeConversation();
 
@@ -453,7 +468,6 @@
         }
         responseText += msg.text;
         thinkingMsg.innerHTML = renderMarkdown(responseText);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
       } else if (msg.type === "sidechat-done") {
         // Save to branch history
         branchHistory.push({ role: "user", content: question });
@@ -585,7 +599,7 @@
     return `
       :host {
         all: initial;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-family: 'Anthropic Serif', Georgia, serif;
         font-size: 14px;
         line-height: 1.5;
       }
@@ -669,15 +683,13 @@
         letter-spacing: 0.02em;
       }
 
-      .sidechat-context-status {
+      .sidechat-model-info {
         font-size: 11px;
         color: var(--text-muted);
-        background: var(--border);
-        padding: 2px 8px;
-        border-radius: 10px;
         margin-left: auto;
         margin-right: 8px;
         white-space: nowrap;
+        font-style: italic;
       }
 
       .sidechat-close {
@@ -730,11 +742,11 @@
       .sidechat-selection {
         margin: 0;
         padding: 8px 12px;
-        border-left: 3px solid var(--quote-border);
         background: var(--quote-bg);
         color: var(--text-muted);
         font-size: 13px;
-        border-radius: 0 6px 6px 0;
+        font-style: italic;
+        border-radius: 6px;
         white-space: pre-wrap;
         word-break: break-word;
       }
