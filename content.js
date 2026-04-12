@@ -941,12 +941,12 @@
         break;
       }
     }
-    if (!replyBtn) return;
+    if (!replyBtn) return false;
 
     const toolbar = replyBtn.parentElement;
 
     // Don't inject twice into the same toolbar
-    if (toolbar.querySelector("[data-sidechat-btn]")) return;
+    if (toolbar.querySelector("[data-sidechat-btn]")) return true;
 
     injectedBtn = document.createElement("button");
     injectedBtn.textContent = "Sidechat";
@@ -965,19 +965,32 @@
     });
 
     toolbar.appendChild(injectedBtn);
+    return true;
   }
+
+  let replyObserver = null;
 
   document.addEventListener("mouseup", (e) => {
     // Don't interfere if clicking our own button
     if (injectedBtn && injectedBtn.contains(e.target)) return;
     cleanupInjectedBtn();
+    if (replyObserver) { replyObserver.disconnect(); replyObserver = null; }
+
     const selection = window.getSelection();
     const text = selection?.toString().trim();
     if (!text) return;
-    // If selection is inside our panel, skip
     if (panelHost && selection.anchorNode && panelHost.contains(selection.anchorNode)) return;
-    // Wait for Claude's Reply toolbar to render
-    setTimeout(() => injectSidechatButton(text), 150);
+
+    // Try immediately, then watch for Reply toolbar to appear
+    if (!injectSidechatButton(text)) {
+      replyObserver = new MutationObserver(() => {
+        if (injectSidechatButton(text)) {
+          replyObserver.disconnect();
+          replyObserver = null;
+        }
+      });
+      replyObserver.observe(document.body, { childList: true, subtree: true });
+    }
   });
 
   document.addEventListener("mousedown", (e) => {
