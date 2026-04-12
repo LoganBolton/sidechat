@@ -919,6 +919,73 @@
   }
 
   // =========================================================================
+  // Selection Button (inject next to Claude's Reply button)
+  // =========================================================================
+
+  let injectedBtn = null;
+
+  function cleanupInjectedBtn() {
+    if (injectedBtn) {
+      injectedBtn.remove();
+      injectedBtn = null;
+    }
+  }
+
+  function injectSidechatButton(selectedText) {
+    // Find Claude's Reply button
+    const buttons = document.querySelectorAll("button");
+    let replyBtn = null;
+    for (const btn of buttons) {
+      if (btn.textContent.trim() === "Reply") {
+        replyBtn = btn;
+        break;
+      }
+    }
+    if (!replyBtn) return;
+
+    const toolbar = replyBtn.parentElement;
+
+    // Don't inject twice into the same toolbar
+    if (toolbar.querySelector("[data-sidechat-btn]")) return;
+
+    injectedBtn = document.createElement("button");
+    injectedBtn.textContent = "Sidechat";
+    injectedBtn.setAttribute("data-sidechat-btn", "true");
+    injectedBtn.className = replyBtn.className;
+
+    injectedBtn.addEventListener("mousedown", (e) => {
+      e.stopPropagation();
+    });
+
+    injectedBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      createPanel(selectedText);
+      cleanupInjectedBtn();
+    });
+
+    toolbar.appendChild(injectedBtn);
+  }
+
+  document.addEventListener("mouseup", (e) => {
+    // Don't interfere if clicking our own button
+    if (injectedBtn && injectedBtn.contains(e.target)) return;
+    cleanupInjectedBtn();
+    const selection = window.getSelection();
+    const text = selection?.toString().trim();
+    if (!text) return;
+    // If selection is inside our panel, skip
+    if (panelHost && selection.anchorNode && panelHost.contains(selection.anchorNode)) return;
+    // Wait for Claude's Reply toolbar to render
+    setTimeout(() => injectSidechatButton(text), 150);
+  });
+
+  document.addEventListener("mousedown", (e) => {
+    if (injectedBtn && injectedBtn.contains(e.target)) return;
+    cleanupInjectedBtn();
+  });
+
+  // =========================================================================
   // Message Listeners
   // =========================================================================
 
