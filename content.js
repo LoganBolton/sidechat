@@ -343,6 +343,8 @@
     style.textContent = getShadowStyles();
     shadowRoot.appendChild(style);
 
+    const earlyTurns = scrapeConversation();
+    const msgCount = earlyTurns.length;
     const hasSelection = selectionText.length > 0;
     const placeholder = hasSelection
       ? "Ask about this selection..."
@@ -359,6 +361,7 @@
       </div>
       <div class="sidechat-body">
         <div class="sidechat-messages">
+          ${msgCount > 0 ? buildContextPreview(earlyTurns) : ""}
           ${hasSelection ? `<blockquote class="sidechat-selection">${escapeHtml(selectionText)}</blockquote>` : ""}
         </div>
         <div class="sidechat-input-area">
@@ -583,6 +586,12 @@
   // Helpers
   // =========================================================================
 
+  function buildContextPreview(turns) {
+    const firstUser = turns.find((t) => t.role === "user");
+    if (!firstUser) return "";
+    return `<div class="sidechat-context-preview">${escapeHtml(firstUser.content)}</div>`;
+  }
+
   function escapeHtml(text) {
     return text
       .replace(/&/g, "&amp;")
@@ -737,6 +746,19 @@
       .sidechat-messages::-webkit-scrollbar-thumb {
         background: var(--scrollbar-thumb);
         border-radius: 3px;
+      }
+
+      .sidechat-context-preview {
+        font-size: 12px;
+        color: var(--text-muted);
+        padding: 8px 10px;
+        border-radius: 6px;
+        background: var(--bg-secondary);
+        max-height: 60px;
+        overflow: hidden;
+        line-height: 1.4;
+        -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 100%);
+        mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 100%);
       }
 
       .sidechat-selection {
